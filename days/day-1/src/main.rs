@@ -1,5 +1,5 @@
 // https://adventofcode.com/2022/day/1
-const FILE_PATH: &str = "day-1/resources/input";
+const FILE_PATH: &str = "days/day-1/resources/input";
 
 fn read_input_file() -> String {
     std::fs::read_to_string(FILE_PATH).expect("Failed to read input file.")
