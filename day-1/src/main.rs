@@ -5,6 +5,7 @@ fn read_input_file() -> String {
     std::fs::read_to_string(FILE_PATH).expect("Failed to read input file.")
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Elf {
     calories: u32,
 }
@@ -32,11 +33,10 @@ fn parse_input(raw_input: &str) -> Vec<Elf> {
     elves
 }
 
-fn main() {
-    let raw_input = read_input_file();
-    let elves = parse_input(&raw_input);
+fn part_one(elves: Vec<Elf>) {
+    println!("=== Part One ===");
 
-    let mut max_calories = elves.get(0).expect("Expected at least one elf").calories;
+    let mut max_calories = elves.get(0).expect("Expected at least one elf.").calories;
     let mut max_elf_index = 0;
 
     for (i, elf) in elves.iter().skip(1).enumerate() {
@@ -47,8 +47,26 @@ fn main() {
     }
 
     println!(
-        "Elf #{} has the most calories totaling at {}",
+        "Elf #{} has the most calories totaling at {}.",
         max_elf_index + 1,
         max_calories,
     );
+}
+
+fn part_two(mut elves: Vec<Elf>) {
+    println!("=== Part Two ===");
+
+    // Highest to lowest
+    elves.sort_by(|a, b| b.cmp(a));
+
+    let total = elves.iter().take(3).map(|elf| elf.calories).sum::<u32>();
+
+    println!("The top three elves have {} calories of snacks.", total);
+}
+
+fn main() {
+    let input = parse_input(&read_input_file());
+    part_one(input.clone());
+    println!();
+    part_two(input);
 }
