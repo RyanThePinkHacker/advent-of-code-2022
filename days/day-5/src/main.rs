@@ -5,6 +5,7 @@ const INPUT_FILE: &str = "days/day-5/resources/input";
 const SUPPLY_CHAR_SEPARATION: u8 = 4;
 const COLUMNS: u8 = 9;
 
+#[derive(Debug)]
 struct Procedure {
     amount: u8,
     from: u8,
@@ -23,11 +24,13 @@ impl TryFrom<&str> for Procedure {
         let from = procedure
             .get(3)
             .with_context(|| "Missing 'from' in procedure.")?
-            .parse::<u8>()?;
+            .parse::<u8>()?
+            - 1;
         let to = procedure
             .get(5)
             .with_context(|| "Missing 'to' in procedure.")?
-            .parse::<u8>()?;
+            .parse::<u8>()?
+            - 1;
 
         Ok(Self { amount, from, to })
     }
@@ -39,34 +42,50 @@ impl std::fmt::Display for Procedure {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Supply {
     columns: Vec<Vec<char>>,
 }
 
 impl Supply {
-    fn execute_procedure(&mut self, procedure: Procedure) -> anyhow::Result<()> {
-        for _ in 0..procedure.amount {
-            self.move_crate(procedure.from, procedure.to)?;
-        }
+    fn execute_procedure_single(&mut self, procedure: &Procedure) -> anyhow::Result<()> {
+        let mut crates = self.take_crates(procedure)?;
+        crates.reverse();
+        self.columns
+            .get_mut(procedure.to as usize)
+            .with_context(|| format!("Couldn't find column at index: {}.", procedure.to))?
+            .append(&mut crates);
+
         Ok(())
     }
 
-    fn move_crate(&mut self, from: u8, to: u8) -> anyhow::Result<()> {
-        let from = from - 1;
-        let to = to - 1;
-
-        let move_crate = self
-            .columns
-            .get_mut(from as usize)
-            .with_context(|| format!("Couldn't get find column at index {}", from))?
-            .pop()
-            .with_context(|| "Column is empty.")?;
-
+    fn execute_procedure_multiple(&mut self, procedure: &Procedure) -> anyhow::Result<()> {
+        let mut crates = self.take_crates(procedure)?;
         self.columns
-            .get_mut(to as usize)
-            .with_context(|| format!("Couldn't get find column at index {}", to))?
-            .push(move_crate);
+            .get_mut(procedure.to as usize)
+            .with_context(|| format!("Couldn't find column at index: {}.", procedure.to))?
+            .append(&mut crates);
+
         Ok(())
+    }
+
+    fn take_crates(&mut self, procedure: &Procedure) -> anyhow::Result<Vec<char>> {
+        let column = self
+            .columns
+            .get_mut(procedure.from as usize)
+            .with_context(|| format!("Couldn't find column at index: {}.", procedure.from))?;
+
+        let column_length = column.len();
+        assert!(
+            column_length >= procedure.amount as usize,
+            "Can't take out {} crates; only {} crates remain.",
+            procedure.amount,
+            column_length
+        );
+
+        let row_position = column_length - procedure.amount as usize;
+
+        Ok(column.split_off(row_position))
     }
 }
 
@@ -95,8 +114,44 @@ impl TryFrom<&str> for Supply {
     }
 }
 
+fn part_one(mut supply: Supply, procedures: &Vec<Procedure>) -> anyhow::Result<()> {
+    println!("=== Part One ===");
+
+    for procedure in procedures {
+        supply.execute_procedure_single(procedure)?;
+    }
+
+    let mut top_characters = String::new();
+
+    for column in supply.columns {
+        top_characters.push(column.last().with_context(|| "Column is empty.")?.clone());
+    }
+
+    println!("The top crates in the supply are: {}.", top_characters);
+
+    Ok(())
+}
+
+fn part_two(mut supply: Supply, procedures: &Vec<Procedure>) -> anyhow::Result<()> {
+    println!("=== Part Two ===");
+
+    for procedure in procedures {
+        supply.execute_procedure_multiple(procedure)?;
+    }
+
+    let mut top_characters = String::new();
+
+    for column in supply.columns {
+        top_characters.push(column.last().with_context(|| "Column is empty.")?.clone());
+    }
+
+    println!("The top crates in the supply are: {}.", top_characters);
+
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
-    let mut supply;
+    let supply;
     let mut procedures = Vec::new();
 
     {
@@ -119,17 +174,9 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    for procedure in procedures {
-        supply.execute_procedure(procedure)?;
-    }
-
-    let mut top_characters = String::new();
-
-    for column in supply.columns {
-        top_characters.push(column.last().with_context(|| "Column is empty.")?.clone());
-    }
-
-    println!("The top crates in the supply are: {}", top_characters);
+    part_one(supply.clone(), &procedures)?;
+    println!();
+    part_two(supply, &procedures)?;
 
     Ok(())
 }
